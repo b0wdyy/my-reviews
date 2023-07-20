@@ -1,16 +1,21 @@
 package main
 
 import (
+	"api/initializers"
 	"api/router"
-	"github.com/gofiber/fiber/v2"
-	_ "github.com/lib/pq"
 	"log"
+
+	"github.com/gofiber/fiber/v2"
 )
+
+func init() {
+	initializers.InitDB()
+}
 
 func main() {
 	app := fiber.New()
 
 	router.SetupRouter(app)
 
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(":8080"))
 }

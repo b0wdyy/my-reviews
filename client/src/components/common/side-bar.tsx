@@ -1,9 +1,9 @@
 'use client'
 
-import { cn } from "@/lib/util";
-import { BookmarkIcon, HomeIcon, StarIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { usePathname } from 'next/navigation'
+import { cn } from "@/lib/util";
+import { BookOpenIcon, BookmarkIcon, HomeIcon, StarIcon } from "@heroicons/react/24/outline";
 
 export default function SideBar() {
     const pathName = usePathname()
@@ -18,6 +18,11 @@ export default function SideBar() {
             name: "Favorites",
             to: "/favorites",
             icon: <StarIcon className="h-6 w-6 text-text" />,
+        },
+        {
+            name: "Reading",
+            to: "/reading",
+            icon: <BookOpenIcon className="h-6 w-6 text-text" />,
         },
         {
             name: "To Read",
