@@ -9,7 +9,9 @@ import (
 )
 
 func init() {
+	initializers.LoadEnv()
 	initializers.InitDB()
+	initializers.InitAWSConfig()
 }
 
 func main() {

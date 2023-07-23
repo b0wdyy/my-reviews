@@ -2,7 +2,8 @@ package handlers
 
 import (
 	"api/initializers"
-	"api/models"
+	"api/services"
+	"net/http"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -12,28 +13,59 @@ func init() {
 }
 
 func GetBooks(c *fiber.Ctx) error {
-	var books []models.Book
-	initializers.DB.Preload("Categories").Find(&books)
+	books := services.GetBooks(c)
 
-	return c.JSON(fiber.Map{
+	return c.Status(http.StatusOK).JSON(fiber.Map{
 		"status": "success",
 		"data":   books,
 	})
 }
 
 func GetBook(c *fiber.Ctx) error {
-	return c.JSON("Single book")
+	book := services.GetBook(c.Params("id"))
+
+	return c.Status(http.StatusOK).JSON(fiber.Map{
+		"status": "success",
+		"data":   book,
+	})
 }
 
 func NewBook(c *fiber.Ctx) error {
-	return c.JSON("New book")
+	book, err := services.NewBook(c)
+
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(http.StatusCreated).JSON(fiber.Map{
+		"status": "success",
+		"data":   book,
+	})
 }
 
 func UpdateBook(c *fiber.Ctx) error {
+	book, err := services.UpdateBook(c)
 
-	return c.JSON("Update book")
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"status":  "error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(http.StatusOK).JSON(fiber.Map{
+		"status": "success",
+		"data":   book,
+	})
 }
 
 func DeleteBook(c *fiber.Ctx) error {
-	return c.JSON("Delete book")
+	services.DeleteBook(c.Params("id"))
+
+	return c.Status(http.StatusOK).JSON(fiber.Map{
+		"status": "success",
+	})
 }
