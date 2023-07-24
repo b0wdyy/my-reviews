@@ -2,6 +2,7 @@ package initializers
 
 import (
 	"log"
+	"os"
 
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
@@ -10,8 +11,20 @@ import (
 
 var DB *gorm.DB
 
+func init() {
+	InitEnv()
+}
+
 func InitDB() {
-	dsn := "postgres://postgres:jPbQQ6bxxQg3H4wSZEZq@db.yjaqrxnqrfgskgtkhkkz.supabase.co:5432/postgres?sslmode=disable"
+	var (
+		host     = os.Getenv("DB_HOST")
+		user     = os.Getenv("DB_USER")
+		password = os.Getenv("DB_PASSWORD")
+		dbname   = os.Getenv("DB_NAME")
+		port     = os.Getenv("DB_PORT")
+	)
+	dsn := "host=" + host + " user=" + user + " password=" + password + " dbname=" + dbname + " port=" + port
+
 	var err error
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
