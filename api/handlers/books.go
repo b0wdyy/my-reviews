@@ -1,16 +1,10 @@
 package handlers
 
 import (
-	"api/initializers"
 	"api/services"
-	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 )
-
-func init() {
-	initializers.InitDB()
-}
 
 func GetBooks(c *fiber.Ctx) error {
 	books := services.GetBooks(c)
@@ -30,17 +24,7 @@ func GetBook(c *fiber.Ctx) error {
 	})
 }
 
-func NewBook(c *fiber.Ctx) error {
-	session, err := initializers.Store.Get(c)
-
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": err.Error(),
-		})
-	}
-
-	fmt.Println(session.Get("user_id"))
-
+func CreateBook(c *fiber.Ctx) error {
 	book, err := services.NewBook(c)
 
 	if err != nil {

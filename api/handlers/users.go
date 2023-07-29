@@ -15,5 +15,5 @@ func Register(c *fiber.Ctx) error {
 }
 
 func Profile(c *fiber.Ctx) error {
-	return c.SendString("Profile")
+	return services.Profile(c)
 }

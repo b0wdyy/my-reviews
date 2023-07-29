@@ -1,6 +1,8 @@
 package initializers
 
-import "github.com/gofiber/storage/redis/v2"
+import (
+	"github.com/gofiber/storage/redis/v2"
+)
 
 var RedisStorage *redis.Storage
 

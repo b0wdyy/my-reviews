@@ -1,84 +1,91 @@
 package services
 
 import (
+	"api/dto"
 	"api/initializers"
+	"api/mappers"
 	"api/models"
-	"context"
+	"api/utils"
 	"errors"
-	"mime/multipart"
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gofiber/fiber/v2"
 )
 
-func GetBooks(ctx *fiber.Ctx) []models.Book {
+func GetBooks(ctx *fiber.Ctx) []dto.BookDto {
 	var books []models.Book
-	dbQuery := initializers.DB
+	dbQuery := initializers.DB.Model(&models.Book{})
 
 	if query := ctx.Query("unfinished"); query != "" {
 		dbQuery = initializers.DB.Where("finished = ?", query)
 	}
 
-	dbQuery.Order("created_at desc").Preload("Categories").Find(&books)
+	dbQuery.Order("created_at desc").Preload("Categories").Preload("Author").Find(&books)
 
-	return books
+	return mappers.BooksToDto(books)
 }
 
-func GetBook(id string) models.Book {
+func GetBook(id string) dto.BookDto {
 	var book models.Book
 
-	initializers.DB.First(&book, id)
+	initializers.DB.First(&book, id).Preload("Categories").Preload("Author")
 
-	return book
+	return mappers.BookToDto(book)
 }
 
-func NewBook(c *fiber.Ctx) (models.Book, error) {
+func NewBook(c *fiber.Ctx) (dto.BookDto, error) {
 	title := c.FormValue("title")
 	categories := c.FormValue("categories")
 	pages, _ := strconv.Atoi(c.FormValue("pages"))
 	notes := c.FormValue("notes")
 	finished := c.FormValue("finished") == "true"
-	cover_image, err := c.FormFile("cover_image")
+	authorId, _ := strconv.Atoi(c.FormValue("author_id"))
+	coverImage, err := c.FormFile("cover_image")
 
 	if err != nil {
-		return models.Book{}, errors.New(err.Error())
+		return dto.BookDto{}, errors.New(err.Error())
 	}
 
-	image, imageError := handleImageUpload(cover_image)
+	image, imageError := utils.HandleImageUpload(coverImage, "books")
 
 	if imageError != "" {
-		return models.Book{}, errors.New(imageError)
+		return dto.BookDto{}, errors.New(imageError)
 	}
+
+	categoriesSlice := strings.Split(categories, ",")
+	convertedAuthorId := uint(authorId)
 
 	book := models.Book{
 		Title:      title,
-		Pages:      pages,
+		Pages:      int64(pages),
 		Notes:      notes,
 		Finished:   finished,
 		CoverImage: image,
+		AuthorID:   &convertedAuthorId,
 	}
 
 	initializers.DB.Create(&book)
 
-	categoriesSlice := strings.Split(categories, ",")
+	var categoryModels []models.Category
 
-	for _, category := range categoriesSlice {
-		category = strings.TrimSpace(category)
+	for _, categoryStr := range categoriesSlice {
+		trimmedCategoryStr := strings.TrimSpace(categoryStr)
+		category := models.Category{
+			Description: trimmedCategoryStr,
+		}
 
-		var categoryModel models.Category
-
-		initializers.DB.FirstOrCreate(&categoryModel, models.Category{Description: category})
-		initializers.DB.Model(&book).Association("Categories").Append(&categoryModel)
+		initializers.DB.Where("lower(description) = ?", strings.ToLower(trimmedCategoryStr)).FirstOrCreate(&category)
+		categoryModels = append(categoryModels, category)
 	}
 
-	return book, nil
+	initializers.DB.Model(&book).Association("Categories").Append(&categoryModels)
+	initializers.DB.Save(&book)
+
+	return mappers.BookToDto(book), nil
 }
 
-func UpdateBook(c *fiber.Ctx) (models.Book, error) {
+func UpdateBook(c *fiber.Ctx) (dto.BookDto, error) {
 	var book models.Book
 
 	initializers.DB.First(&book, c.Params("id"))
@@ -90,47 +97,22 @@ func UpdateBook(c *fiber.Ctx) (models.Book, error) {
 	cover_image, err := c.FormFile("cover_image")
 
 	if err != nil {
-		return models.Book{}, errors.New(err.Error())
+		return dto.BookDto{}, errors.New(err.Error())
 	}
 
 	initializers.DB.Model(&book).Updates(models.Book{
 		Title:      title,
-		Pages:      pages,
+		Pages:      int64(pages),
 		Notes:      notes,
 		Finished:   finished,
 		CoverImage: cover_image.Filename,
 	})
 
-	return book, nil
+	return mappers.BookToDto(book), nil
 }
 
 func DeleteBook(id string) {
 	var book models.Book
 
 	initializers.DB.Delete(&book, id)
-}
-
-func handleImageUpload(file *multipart.FileHeader) (string, string) {
-	f, err := file.Open()
-
-	if err != nil {
-		return "", err.Error()
-	}
-
-	client := s3.NewFromConfig(initializers.AWSConfig)
-
-	uploader := manager.NewUploader(client)
-
-	result, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String("my-reviews-bowdy"),
-		Key:    aws.String(file.Filename),
-		Body:   f,
-		ACL:    "public-read",
-	})
-
-	if err != nil {
-		return "", err.Error()
-	}
-
-	return result.Location, ""
 }

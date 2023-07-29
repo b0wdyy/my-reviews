@@ -2,19 +2,12 @@ package services
 
 import (
 	"api/initializers"
+	"api/mappers"
 	"api/models"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/session"
-	"github.com/gofiber/storage/redis/v2"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var storage = redis.New()
-var store = session.New(session.Config{
-	KeyLookup: "cookie:my_reviews_session",
-	Storage:   storage,
-})
 
 func Login(c *fiber.Ctx) error {
 	var body struct {
@@ -31,7 +24,7 @@ func Login(c *fiber.Ctx) error {
 	user := models.User{}
 	initializers.DB.Where(&models.User{Email: body.Email}).First(&user)
 
-	if user.ID == "" {
+	if user.ID == 0 {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "User not found",
 		})
@@ -43,7 +36,7 @@ func Login(c *fiber.Ctx) error {
 		})
 	}
 
-	session, err := store.Get(c)
+	session, err := initializers.Store.Get(c)
 
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -86,9 +79,9 @@ func Register(c *fiber.Ctx) error {
 		Password: string(hashedPassword),
 	}
 
-	initializers.DB.Create(&user)
+	result := initializers.DB.Create(&user)
 
-	if user.ID == "" {
+	if result.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "Save user failed",
 		})
@@ -96,6 +89,18 @@ func Register(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "success",
-		"user":    user,
+		"user":    mappers.UserToDto(user),
+	})
+}
+
+func Profile(c *fiber.Ctx) error {
+	userId := c.Locals("user_id").(uint)
+
+	var user models.User
+	initializers.DB.Where("id = ?", userId).First(&user)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "success",
+		"user":    mappers.UserToDto(user),
 	})
 }

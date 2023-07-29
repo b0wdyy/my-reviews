@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -32,10 +31,4 @@ func InitDB() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	DB.Callback().Create().Before("gorm:before_create").Register("setID", setIDBeforeCreate)
-}
-
-func setIDBeforeCreate(tx *gorm.DB) {
-	tx.Statement.SetColumn("ID", uuid.New().String())
 }

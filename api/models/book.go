@@ -1,17 +1,17 @@
 package models
 
 import (
-	"time"
+	"gorm.io/gorm"
 )
 
 type Book struct {
-	ID         string     `json:"id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	gorm.Model
 	Title      string     `json:"title"`
-	Pages      int        `json:"pages"`
+	Pages      int64      `json:"pages"`
+	CoverImage string     `json:"cover_image"`
 	Notes      string     `json:"notes"`
 	Finished   bool       `json:"finished"`
-	CoverImage string     `json:"cover_image"`
-	Categories []Category `json:"categories" gorm:"many2many:books_categories;"`
-	CreatedAt  time.Time  `json:"created_at"`
-	DeletedAt  time.Time  `json:"deleted_at" gorm:"default:null"`
+	AuthorID   *uint      `json:"author_id"`
+	Author     Author     `json:"author"`
+	Categories []Category `json:"categories" gorm:"many2many:book_categories;"`
 }
